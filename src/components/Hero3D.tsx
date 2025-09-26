@@ -1,7 +1,5 @@
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Points, PointMaterial } from '@react-three/drei';
 import { useRef, useMemo } from 'react';
-import * as random from 'maath/random/dist/maath-random.esm';
 import * as THREE from 'three';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
@@ -9,27 +7,65 @@ import { Download, Mail } from 'lucide-react';
 import heroImage from '@/assets/hero-image.jpg';
 
 function StarField(props: any) {
-  const ref = useRef<THREE.Points>(null!);
-  const [sphere] = useMemo(() => [random.inSphere(new Float32Array(5000), { radius: 1.5 })], []);
+  const pointsRef = useRef<THREE.Points>(null!);
+  
+  const { positions, colors } = useMemo(() => {
+    const count = 5000;
+    const positions = new Float32Array(count * 3);
+    const colors = new Float32Array(count * 3);
+    
+    for (let i = 0; i < count; i++) {
+      // Generate random points in a sphere
+      const radius = Math.random() * 2;
+      const theta = Math.random() * Math.PI * 2;
+      const phi = Math.acos(Math.random() * 2 - 1);
+      
+      positions[i * 3] = radius * Math.sin(phi) * Math.cos(theta);
+      positions[i * 3 + 1] = radius * Math.sin(phi) * Math.sin(theta);
+      positions[i * 3 + 2] = radius * Math.cos(phi);
+      
+      // Random colors with blue tint
+      colors[i * 3] = 0.3 + Math.random() * 0.7; // R
+      colors[i * 3 + 1] = 0.5 + Math.random() * 0.5; // G
+      colors[i * 3 + 2] = 1.0; // B
+    }
+    
+    return { positions, colors };
+  }, []);
 
   useFrame((state, delta) => {
-    if (ref.current) {
-      ref.current.rotation.x -= delta / 10;
-      ref.current.rotation.y -= delta / 15;
+    if (pointsRef.current) {
+      pointsRef.current.rotation.x -= delta / 10;
+      pointsRef.current.rotation.y -= delta / 15;
     }
   });
 
   return (
     <group rotation={[0, 0, Math.PI / 4]}>
-      <Points ref={ref} positions={sphere} stride={3} frustumCulled={false} {...props}>
-        <PointMaterial
-          transparent
-          color="#60a5fa"
+      <points ref={pointsRef} {...props}>
+        <bufferGeometry>
+          <bufferAttribute
+            attach="attributes-position"
+            count={positions.length / 3}
+            array={positions}
+            itemSize={3}
+          />
+          <bufferAttribute
+            attach="attributes-color"
+            count={colors.length / 3}
+            array={colors}
+            itemSize={3}
+          />
+        </bufferGeometry>
+        <pointsMaterial
           size={0.005}
+          vertexColors
+          transparent
+          opacity={0.8}
           sizeAttenuation={true}
           depthWrite={false}
         />
-      </Points>
+      </points>
     </group>
   );
 }
